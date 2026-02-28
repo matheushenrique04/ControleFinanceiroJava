@@ -1,0 +1,161 @@
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.File;
+
+class Transacao {
+    String descricao;
+    double valor;
+
+    Transacao(String descricao, double valor) {
+        this.descricao = descricao;
+        this.valor = valor;
+    }
+}
+
+public class Main {
+    static ArrayList<Transacao> transacoes = new ArrayList<>();
+    static Scanner scanner = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        // Carregar transações do arquivo ao iniciar
+        carregarArquivo();
+
+        int opcao = -1;
+
+        do {
+            System.out.println("\n=== CONTROLE FINANCEIRO ===");
+            System.out.println("1 - Adicionar receita");
+            System.out.println("2 - Adicionar despesa");
+            System.out.println("3 - Listar transações");
+            System.out.println("4 - Ver saldo");
+            System.out.println("0 - Sair");
+            System.out.print("Escolha: ");
+
+            try {
+                opcao = scanner.nextInt();
+                scanner.nextLine(); // limpar buffer
+            } catch (Exception e) {
+                System.out.println("\n[!] ERRO: Digite apenas números de 0 a 4.");
+                scanner.nextLine();
+                opcao = -1;
+                continue;
+            }
+
+            if (opcao < 0 || opcao > 4) {
+                System.out.println("\n[!] Opção inválida. Escolha entre 0 e 4.");
+                opcao = -1;
+                continue;
+            }
+
+            switch (opcao) {
+                case 1:
+                    adicionarTransacao(true);
+                    break;
+                case 2:
+                    adicionarTransacao(false);
+                    break;
+                case 3:
+                    listarTransacoes();
+                    break;
+                case 4:
+                    mostrarSaldo();
+                    break;
+            }
+
+        } while (opcao != 0);
+
+        // Salvar todas as transações antes de fechar
+        salvarArquivo();
+        System.out.println("Programa finalizado. Transações salvas em 'data/transacoes.txt'.");
+    }
+
+    static void adicionarTransacao(boolean receita) {
+        System.out.print("Descrição: ");
+        String descricao = scanner.nextLine();
+
+        double valor = 0;
+
+        while (true) {
+            try {
+                System.out.print("Valor: ");
+                valor = scanner.nextDouble();
+                scanner.nextLine();
+                break;
+            } catch (Exception e) {
+                System.out.println("[!] Digite um valor numérico válido.");
+                scanner.nextLine();
+            }
+        }
+
+        if (!receita) {
+            valor = -valor;
+        }
+
+        transacoes.add(new Transacao(descricao, valor));
+        System.out.println("Transação adicionada!");
+
+        // Salvar imediatamente após adicionar
+        salvarArquivo();
+    }
+
+    static void listarTransacoes() {
+        if (transacoes.isEmpty()) {
+            System.out.println("Nenhuma transação cadastrada.");
+            return;
+        }
+
+        for (Transacao t : transacoes) {
+            String tipo = (t.valor >= 0) ? "RECEITA" : "DESPESA";
+            System.out.printf("[%s] %s - R$ %.2f%n",
+                    tipo,
+                    t.descricao,
+                    Math.abs(t.valor));
+        }
+    }
+
+    static void mostrarSaldo() {
+        double saldo = 0;
+        for (Transacao t : transacoes) {
+            saldo += t.valor;
+        }
+        System.out.printf("Saldo atual: R$ %.2f%n", saldo);
+    }
+
+    static void salvarArquivo() {
+        try {
+            File pasta = new File("data");
+            if (!pasta.exists()) {
+                pasta.mkdir(); // cria a pasta se não existir
+            }
+            PrintWriter writer = new PrintWriter(new FileWriter("data/transacoes.txt"));
+            for (Transacao t : transacoes) {
+                writer.println(t.descricao + ";" + t.valor);
+            }
+            writer.close();
+        } catch (IOException e) {
+            System.out.println("[!] Erro ao salvar arquivo.");
+        }
+    }
+
+    static void carregarArquivo() {
+        File arquivo = new File("data/transacoes.txt");
+        if (!arquivo.exists()) return;
+
+        try (Scanner leitor = new Scanner(arquivo)) {
+            while (leitor.hasNextLine()) {
+                String linha = leitor.nextLine();
+                String[] partes = linha.split(";");
+                if (partes.length == 2) {
+                    String descricao = partes[0];
+                    double valor = Double.parseDouble(partes[1]);
+                    transacoes.add(new Transacao(descricao, valor));
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("[!] Erro ao carregar arquivo.");
+        }
+    }
+}
